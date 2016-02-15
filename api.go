@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 )
@@ -18,7 +19,7 @@ type Version struct {
 
 // NewAPI creates a new API with a specified name.
 func NewAPI(version string, handler http.Handler) *Version {
-	return &Version{version: version, handler: handler}
+	return &Version{version: version, handler: handler, obsolete: false}
 }
 
 // Version returns the version of the API.
@@ -40,7 +41,16 @@ func (a *Version) MakeObsolete() {
 // regarding the wanted version.
 type VendorMiddleware struct {
 	vendorName string
-	versions   []Version
+	versions   map[string]*Version
+}
+
+func (v *VendorMiddleware) version(versionName string) (*Version, error) {
+	for key := range v.versions {
+		if key == versionName {
+			return v.versions[key], nil
+		}
+	}
+	return nil, errors.New("Version not found")
 }
 
 // VendorName returns the vendorName used
@@ -61,18 +71,18 @@ func (v *VendorMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Unknown vendor", http.StatusNotFound)
 	} else {
 
-		if lastIndex := strings.LastIndex(acceptVersion, vendorSeparator); lastIndex == -1 {
+		lastIndex := strings.LastIndex(acceptVersion, vendorSeparator)
+
+		if lastIndex == -1 {
 			http.Error(w, "Can not read accepted version", http.StatusNotFound)
-		} else {
-
-			version := acceptVersion[lastIndex:]
-
-			for _, registeredVersion := range v.versions {
-				if registeredVersion.version == version {
-
-				}
-			}
+			return
 		}
+		version, err := v.version(acceptVersion[lastIndex:])
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+		version.handler.ServeHTTP(w, r)
 	}
 
 }

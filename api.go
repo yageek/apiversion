@@ -40,8 +40,10 @@ func (a *Version) MakeObsolete() {
 // VendorMiddleware dispatches the request
 // regarding the wanted version.
 type VendorMiddleware struct {
-	vendorName string
-	versions   map[string]*Version
+	vendorName        string
+	versions          map[string]*Version
+	defaultVersionKey string
+	versionSeparator  string
 }
 
 func (v *VendorMiddleware) version(versionName string) (*Version, error) {
@@ -53,6 +55,10 @@ func (v *VendorMiddleware) version(versionName string) (*Version, error) {
 	return nil, errors.New("Version not found")
 }
 
+func (v *VendorMiddleware) defaultVersion() *Version {
+	return v.versions[v.defaultVersionKey]
+}
+
 // VendorName returns the vendorName used
 // to determine the vendor used in the
 // "Accept" header.
@@ -61,23 +67,38 @@ func (v *VendorMiddleware) VendorName() string {
 }
 
 // NewVendorMiddleware returns a new middleware.
-func NewVendorMiddleware(name string) *VendorMiddleware {
-	return &VendorMiddleware{vendorName: name}
+func NewVendorMiddleware(name string, versions ...*Version) (*VendorMiddleware, error) {
+	middleware := &VendorMiddleware{
+		vendorName:       name,
+		versions:         make(map[string]*Version, len(versions)),
+		versionSeparator: "-",
+	}
+
+	for _, version := range versions {
+		if _, ok := middleware.versions[version.Version()]; !ok {
+			middleware.versions[version.Version()] = version
+		} else {
+			return nil, errors.New("Version with same identifer already present")
+		}
+	}
+
+	middleware.defaultVersionKey = versions[len(versions)-1].Version()
+	return middleware, nil
 }
 
 func (v *VendorMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
-	if acceptVersion := r.Header.Get("Accept"); acceptVersion != v.VendorName() {
-		http.Error(w, "Unknown vendor", http.StatusNotFound)
+	if acceptHeader := r.Header.Get("Accept"); acceptHeader == "" || !strings.Contains(acceptHeader, v.VendorName()) {
+		http.Error(w, "Wrong vendor identifier", http.StatusNotFound)
 	} else {
 
-		lastIndex := strings.LastIndex(acceptVersion, vendorSeparator)
-
+		lastIndex := strings.LastIndex(acceptHeader, v.versionSeparator)
 		if lastIndex == -1 {
-			http.Error(w, "Can not read accepted version", http.StatusNotFound)
+			v.defaultVersion().handler.ServeHTTP(w, r)
 			return
 		}
-		version, err := v.version(acceptVersion[lastIndex:])
+		versionIndex := len(v.versionSeparator) + lastIndex
+		version, err := v.version(acceptHeader[versionIndex:])
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusNotFound)
 			return

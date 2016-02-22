@@ -2,7 +2,6 @@ package apiversion
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"strings"
 )
@@ -68,14 +67,10 @@ func NewVendorMiddleware(name string, versions ...*Version) (*VendorMiddleware, 
 // CheckVendorHandler wraps an handler and call it only if the vendor
 // corresponds to the appropriate vendor.
 func (v *VendorMiddleware) CheckVendorHandler(h http.Handler) http.Handler {
-
-	fmt.Println("Checking vendor accept...")
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		fmt.Println("Checking...")
 		if acceptHeader := r.Header.Get("Accept"); acceptHeader == "" || !strings.Contains(acceptHeader, v.VendorName()) {
 			http.Error(rw, "Wrong vendor identifier", http.StatusNotFound)
 		} else {
-			fmt.Println("Vendor OK...", acceptHeader)
 			h.ServeHTTP(rw, r)
 		}
 	})

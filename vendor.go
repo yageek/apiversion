@@ -1,7 +1,8 @@
-package api
+package apiversion
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 )
@@ -10,32 +11,10 @@ const (
 	vendorSeparator = "application/vnd."
 )
 
-// Version represents an API version.
-type Version struct {
-	version  string
-	handler  http.Handler
-	obsolete bool
-}
-
-// NewAPI creates a new API with a specified name.
-func NewAPI(version string, handler http.Handler) *Version {
-	return &Version{version: version, handler: handler, obsolete: false}
-}
-
-// Version returns the version of the API.
-func (a *Version) Version() string {
-	return a.version
-}
-
-// Handler returns an handler.
-func (a *Version) Handler() http.Handler {
-	return a.handler
-}
-
-// MakeObsolete indicates an API is obsolete.
-func (a *Version) MakeObsolete() {
-	a.obsolete = true
-}
+// Common errors
+var (
+	ErrVersionNotFound = errors.New("Version not found")
+)
 
 // VendorMiddleware dispatches the request
 // regarding the wanted version.
@@ -52,7 +31,7 @@ func (v *VendorMiddleware) version(versionName string) (*Version, error) {
 			return v.versions[key], nil
 		}
 	}
-	return nil, errors.New("Version not found")
+	return nil, ErrVersionNotFound
 }
 
 func (v *VendorMiddleware) defaultVersion() *Version {
@@ -86,24 +65,46 @@ func NewVendorMiddleware(name string, versions ...*Version) (*VendorMiddleware, 
 	return middleware, nil
 }
 
-func (v *VendorMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+// CheckVendorHandler wraps an handler and call it only if the vendor
+// corresponds to the appropriate vendor.
+func (v *VendorMiddleware) CheckVendorHandler(h http.Handler) http.Handler {
 
-	if acceptHeader := r.Header.Get("Accept"); acceptHeader == "" || !strings.Contains(acceptHeader, v.VendorName()) {
-		http.Error(w, "Wrong vendor identifier", http.StatusNotFound)
-	} else {
+	fmt.Println("Checking vendor accept...")
+	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		fmt.Println("Checking...")
+		if acceptHeader := r.Header.Get("Accept"); acceptHeader == "" || !strings.Contains(acceptHeader, v.VendorName()) {
+			http.Error(rw, "Wrong vendor identifier", http.StatusNotFound)
+		} else {
+			fmt.Println("Vendor OK...", acceptHeader)
+			h.ServeHTTP(rw, r)
+		}
+	})
+}
 
+// DispatchVersion returns the handler
+// that corresponds to the appropriate version
+func (v *VendorMiddleware) DispatchVersion() http.Handler {
+
+	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+
+		acceptHeader := r.Header.Get("Accept")
 		lastIndex := strings.LastIndex(acceptHeader, v.versionSeparator)
+
 		if lastIndex == -1 {
-			v.defaultVersion().handler.ServeHTTP(w, r)
+			v.defaultVersion().handler.ServeHTTP(rw, r)
 			return
 		}
 		versionIndex := len(v.versionSeparator) + lastIndex
 		version, err := v.version(acceptHeader[versionIndex:])
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusNotFound)
+			http.Error(rw, err.Error(), http.StatusNotFound)
 			return
 		}
-		version.handler.ServeHTTP(w, r)
-	}
+		version.handler.ServeHTTP(rw, r)
+	})
+}
 
+// Default implementation in case of non using a middleware
+func (v *VendorMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	v.CheckVendorHandler(v.DispatchVersion()).ServeHTTP(w, r)
 }

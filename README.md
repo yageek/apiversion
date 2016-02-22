@@ -8,3 +8,4 @@ Simple API versioning with Golang with or without any middleware stack.
 go get -v github.com/yageek/apiversion
 ```
 
+For usage, see examples folder.

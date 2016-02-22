@@ -5,7 +5,7 @@ Simple API versioning with Golang.
 # Installation
 
 ```
-go get -v github.com/yageek/apiversioning
+go get -v github.com/yageek/apiversion
 ```
 
 

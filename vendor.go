@@ -82,7 +82,7 @@ func (v *VendorMiddleware) CheckVendorHandler(h http.Handler) http.Handler {
 }
 
 // DispatchVersion returns the handler
-// that corresponds to the appropriate version
+// that corresponds to the appropriate version.
 func (v *VendorMiddleware) DispatchVersion() http.Handler {
 
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {

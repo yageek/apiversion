@@ -18,13 +18,3 @@ func NewVersion(version string, handler http.Handler) *Version {
 func (a *Version) Version() string {
 	return a.version
 }
-
-// Handler returns an handler.
-func (a *Version) Handler() http.Handler {
-	return a.handler
-}
-
-// MakeObsolete indicates an API is obsolete.
-func (a *Version) MakeObsolete() {
-	a.obsolete = true
-}

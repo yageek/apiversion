@@ -12,7 +12,8 @@ const (
 
 // Common errors
 var (
-	ErrVersionNotFound = errors.New("Version not found")
+	ErrVersionNotFound  = errors.New("Version not found")
+	ErrVersionDuplicate = errors.New("Version with same identifer already present")
 )
 
 // VendorMiddleware dispatches the request
@@ -56,7 +57,7 @@ func NewVendorMiddleware(name string, versions ...*Version) (*VendorMiddleware, 
 		if _, ok := middleware.versions[version.Version()]; !ok {
 			middleware.versions[version.Version()] = version
 		} else {
-			return nil, errors.New("Version with same identifer already present")
+			return nil, ErrVersionDuplicate
 		}
 	}
 

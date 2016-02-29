@@ -33,7 +33,7 @@ after within the `Accept` header after the vendor identifier.
 For example, to match the `v2` version, the request `Accept` header will be:
 
 ```
-Accept: application/vnd.mybusiness.com-v1
+Accept: application/vnd.mybusiness.com-v2
 ```
 
 # Usage

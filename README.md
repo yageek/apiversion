@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/yageek/apiversion.svg?branch=master)](https://travis-ci.org/yageek/apiversion)
+[![Coverage Status](https://coveralls.io/repos/github/yageek/apiversion/badge.svg?branch=master)](https://coveralls.io/github/yageek/apiversion?branch=master)
 [![GoDoc](https://godoc.org/github.com/yageek/apiversion?status.png)](https://godoc.org/github.com/yageek/apiversion)  [![Report Cart](http://goreportcard.com/badge/yageek/apiversion)](http://goreportcard.com/report/yageek/apiversion)
 [![MIT License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](LICENSE)
 
